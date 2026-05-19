@@ -23,7 +23,7 @@ A Docker-based web UI tool for synchronizing users across media servers (Emby, J
 ### Using Docker
 
 ```bash
-docker run -p 8000:8000 -v config.json:/app/config.json ghcr.io/your-username/mbusersync:latest
+docker run -p 8000:8000 -v config.json:/app/config.json ghcr.io/eatprilosec/mbusersync:latest
 ```
 
 Then access the web UI at `http://localhost:8000`
@@ -36,7 +36,7 @@ Create a `docker-compose.yml` file:
 version: '3.8'
 services:
   mbusersync:
-    image: ghcr.io/your-username/mbusersync:latest
+    image: ghcr.io/eatprilosec/mbusersync:latest
     ports:
       - "8000:8000"
     volumes:

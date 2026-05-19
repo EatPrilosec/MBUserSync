@@ -55,3 +55,8 @@ config.json
 # Misc
 *.log
 .DS_Store
+
+
+#testing dir
+
+testing
