@@ -28,6 +28,29 @@ docker run -p 8000:8000 -v config.json:/app/config.json ghcr.io/your-username/mb
 
 Then access the web UI at `http://localhost:8000`
 
+### Using Docker Compose
+
+Create a `docker-compose.yml` file:
+
+```yaml
+version: '3.8'
+services:
+  mbusersync:
+    image: ghcr.io/your-username/mbusersync:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config.json:/app/config.json
+    restart: unless-stopped
+```
+
+Then run:
+```bash
+docker compose up -d
+```
+
+Access the web UI at `http://localhost:8000`
+
 ### Local Development
 
 1. **Backend**:
