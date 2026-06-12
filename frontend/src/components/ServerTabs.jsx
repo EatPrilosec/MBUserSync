@@ -31,7 +31,7 @@ export function SeerrTab() {
   return (
     <div className="card">
       <h2>Seerr Configuration</h2>
-      <p className="text-muted mb-2">Unified configuration for Seerr (Overseerr/Jellyseerr)</p>
+      <p className="text-muted mb-2">Unified configuration for Seerr</p>
       <ServerConfigForm serverName="seerr" />
     </div>
   )

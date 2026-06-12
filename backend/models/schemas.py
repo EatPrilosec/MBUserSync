@@ -40,7 +40,7 @@ class SyncConfigSchema(BaseModel):
     """Sync configuration."""
     sync_mode: SyncModeEnum = SyncModeEnum.PRIMARY_SOURCE
     sync_enabled: bool = True
-    cron_schedule: str = "0 */20 * * * *"  # Every 20 minutes
+    cron_schedule: str = "*/20 * * * *"  # Every 20 minutes
 
 
 class AppSettingsSchema(BaseModel):

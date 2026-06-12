@@ -8,11 +8,11 @@ export default function SettingsPage() {
   const [message, setMessage] = useState(null)
   const [validationResult, setValidationResult] = useState(null)
   
-  const { control, handleSubmit, watch, formState: { errors } } = useForm({
+  const { control, handleSubmit, watch, reset, formState: { errors } } = useForm({
     defaultValues: {
       sync_mode: 'primary_source',
       sync_enabled: true,
-      cron_schedule: '0 */20 * * * *',
+      cron_schedule: '*/20 * * * *',
     }
   })
   
@@ -20,6 +20,7 @@ export default function SettingsPage() {
   
   useEffect(() => {
     loadSyncStatus()
+    loadSyncConfig()
   }, [])
   
   const loadSyncStatus = async () => {
@@ -28,6 +29,21 @@ export default function SettingsPage() {
       setSyncStatus(status)
     } catch (error) {
       console.error('Error loading sync status:', error)
+    }
+  }
+  
+  const loadSyncConfig = async () => {
+    try {
+      const settings = await api.getSettings()
+      if (settings?.sync_config) {
+        reset({
+          sync_mode: settings.sync_config.sync_mode ?? 'primary_source',
+          sync_enabled: settings.sync_config.sync_enabled ?? true,
+          cron_schedule: settings.sync_config.cron_schedule ?? '*/20 * * * *',
+        })
+      }
+    } catch (error) {
+      console.debug('Could not load sync config:', error.message)
     }
   }
   
@@ -111,7 +127,9 @@ export default function SettingsPage() {
             <Controller
               name="sync_enabled"
               control={control}
-              render={({ field }) => <input type="checkbox" {...field} />}
+              render={({ field: { value, onChange, ...rest } }) => (
+                <input type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked)} {...rest} />
+              )}
             />
             <span>Enable automatic syncing</span>
           </label>
@@ -151,13 +169,13 @@ export default function SettingsPage() {
                 {...field}
                 id="cron_schedule"
                 type="text"
-                placeholder="0 */20 * * * *"
+                placeholder="*/20 * * * *"
               />
             )}
           />
           {errors.cron_schedule && <span className="text-muted">{errors.cron_schedule.message}</span>}
           <p className="text-muted mt-1">
-            Format: minute hour day month dayOfWeek (e.g., "0 */20 * * * *" = every 20 minutes)
+            Format: minute hour day month dayOfWeek (e.g., "*/20 * * * *" = every 20 minutes)
           </p>
         </div>
         

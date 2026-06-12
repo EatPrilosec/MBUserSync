@@ -53,9 +53,13 @@ export const updateServer = (serverName, config) => fetchAPI(`/servers/${serverN
   method: 'PUT',
   body: JSON.stringify(config),
 })
-export const testServer = (serverName) => fetchAPI(`/servers/${serverName}/test`, {
-  method: 'POST',
-})
+export const testServer = (serverName, config) => {
+  const options = { method: 'POST' }
+  if (config) {
+    options.body = JSON.stringify(config)
+  }
+  return fetchAPI(`/servers/${serverName}/test`, options)
+}
 export const getServerUsers = (serverName) => fetchAPI(`/servers/${serverName}/users`, {
   method: 'POST',
 })

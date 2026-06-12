@@ -19,7 +19,7 @@ class AppSettings(BaseSettings):
     # Sync defaults from env
     sync_enabled: bool = True
     sync_mode: SyncModeEnum = SyncModeEnum.PRIMARY_SOURCE
-    sync_cron: str = "0 */20 * * * *"  # Every 20 minutes
+    sync_cron: str = "*/20 * * * *"  # Every 20 minutes
     
     class Config:
         env_file = ".env"
@@ -91,7 +91,7 @@ class ConfigService:
             "sync_config": {
                 "sync_mode": "primary_source",
                 "sync_enabled": True,
-                "cron_schedule": "0 */20 * * * *"
+                "cron_schedule": "*/20 * * * *"
             }
         }
     
@@ -164,20 +164,19 @@ class ConfigService:
                 if server_cfg.get("is_primary", False):
                     primary_count += 1
         
-        if primary_count > 1:
-            errors.append("Only one server can be set as primary")
-        
         if enabled_count == 0:
             errors.append("At least one server must be enabled")
-        
-        # Validate sync mode
+            
         sync_config = self.get_sync_config()
         if sync_config.sync_mode not in [SyncModeEnum.PRIMARY_SOURCE, SyncModeEnum.ANY_TO_ANY]:
             errors.append(f"Invalid sync mode: {sync_config.sync_mode}")
-        
-        # If primary_source mode and no primary set, warn
-        if sync_config.sync_mode == SyncModeEnum.PRIMARY_SOURCE and primary_count == 0:
-            errors.append("PRIMARY_SOURCE sync mode requires a primary server to be set")
+            
+        # If primary_source mode, enforce primary server rules
+        if sync_config.sync_mode == SyncModeEnum.PRIMARY_SOURCE:
+            if primary_count > 1:
+                errors.append("Only one server can be set as primary")
+            if primary_count == 0:
+                errors.append("PRIMARY_SOURCE sync mode requires a primary server to be set")
         
         return len(errors) == 0, errors
 
@@ -190,5 +189,6 @@ def get_config_service() -> ConfigService:
     """Get or create the global config service."""
     global _config_service
     if _config_service is None:
-        _config_service = ConfigService()
+        settings = AppSettings()
+        _config_service = ConfigService(config_path=settings.config_file)
     return _config_service

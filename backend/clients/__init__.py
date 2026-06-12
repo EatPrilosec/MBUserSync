@@ -27,16 +27,25 @@ class APIClientManager:
             logger.warning(f"Server {server_type} is disabled")
             return None
         
-        if server_type == ServerType.EMBY:
-            return EmbyJellyfinClient(config.host, config.port, config.api_key)
-        elif server_type == ServerType.JELLYFIN:
-            return EmbyJellyfinClient(config.host, config.port, config.api_key)
-        elif server_type == ServerType.OMBI:
-            return OmbiClient(config.host, config.port, config.api_key)
-        elif server_type == ServerType.SEERR:
-            return SeerrClient(config.host, config.port, config.api_key)
+        # Return existing client if already created
+        if self.clients.get(server_type) is not None:
+            return self.clients[server_type]
         
-        return None
+        client = None
+        if server_type == ServerType.EMBY:
+            client = EmbyJellyfinClient(config.host, config.port, config.api_key)
+        elif server_type == ServerType.JELLYFIN:
+            client = EmbyJellyfinClient(config.host, config.port, config.api_key)
+        elif server_type == ServerType.OMBI:
+            client = OmbiClient(config.host, config.port, config.api_key)
+        elif server_type == ServerType.SEERR:
+            client = SeerrClient(config.host, config.port, config.api_key)
+        
+        # Store the client so close_all() can clean it up
+        if client is not None:
+            self.clients[server_type] = client
+        
+        return client
     
     async def close_all(self) -> None:
         """Close all client connections."""

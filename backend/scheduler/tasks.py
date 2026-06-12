@@ -27,9 +27,10 @@ async def sync_task():
     
     logger.info(f"Starting scheduled sync (mode: {sync_config.sync_mode})")
     
+    client_manager = APIClientManager()
+    
     try:
         # Create client manager and build servers dict
-        client_manager = APIClientManager()
         servers = {}
         
         for server_type in ServerType:
@@ -62,7 +63,7 @@ async def sync_task():
         # Clean up clients
         try:
             await client_manager.close_all()
-        except:
+        except Exception:
             pass
 
 

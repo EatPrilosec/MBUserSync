@@ -1,6 +1,6 @@
 """API routes for server management, sync control, and settings."""
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 from fastapi import FastAPI, HTTPException
 from datetime import datetime
 
@@ -110,11 +110,11 @@ def setup_routes(app: FastAPI) -> None:
             raise HTTPException(status_code=400, detail=str(e))
     
     @app.post("/api/servers/{server_name}/test", response_model=ServerTestResultSchema)
-    async def test_server(server_name: str):
+    async def test_server(server_name: str, config_override: Optional[ServerConfigSchema] = None):
         """Test connection to a server."""
         try:
             server_type = ServerType(server_name)
-            config = config_service.get_server_config(server_name)
+            config = config_override or config_service.get_server_config(server_name)
             
             if config is None:
                 return ServerTestResultSchema(
@@ -230,7 +230,19 @@ def setup_routes(app: FastAPI) -> None:
     async def update_sync_config(config: SyncConfigSchema):
         """Update sync configuration."""
         try:
+            from apscheduler.triggers.cron import CronTrigger
+            try:
+                CronTrigger.from_crontab(config.cron_schedule)
+            except ValueError as e:
+                raise ValueError(f"Invalid cron schedule: {str(e)}")
+            
             config_service.update_sync_config(config)
+            
+            import backend.main
+            if backend.main.scheduler:
+                from backend.scheduler.tasks import setup_scheduler
+                setup_scheduler(backend.main.scheduler)
+                
             return {"success": True, "message": "Sync config updated"}
         except Exception as e:
             logger.error(f"Error updating sync config: {str(e)}")

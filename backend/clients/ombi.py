@@ -20,11 +20,11 @@ class OmbiClient(BaseMediaServerClient):
         try:
             client = await self._get_client()
             headers = {"ApiKey": self.api_key}
-            response = await client.get(f"{self.base_url}/user?take=1", headers=headers, timeout=10)
+            response = await client.get(f"{self.base_url}/Identity/Users", headers=headers, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
-                total = data.get("total", 0)
+                total = len(data) if isinstance(data, list) else 0
                 return True, f"Connected. Found {total} users."
             else:
                 return False, f"Connection failed: HTTP {response.status_code}"
@@ -37,40 +37,31 @@ class OmbiClient(BaseMediaServerClient):
             client = await self._get_client()
             headers = {"ApiKey": self.api_key}
             
-            users = []
-            skip = 0
-            take = 50
+            response = await client.get(f"{self.base_url}/Identity/Users", headers=headers)
+            if response.status_code != 200:
+                logger.error(f"Ombi: Failed to get users: HTTP {response.status_code}")
+                return []
             
-            while True:
-                response = await client.get(
-                    f"{self.base_url}/user?take={take}&skip={skip}",
-                    headers=headers
-                )
-                
-                if response.status_code != 200:
-                    logger.error(f"Ombi: Failed to get users: HTTP {response.status_code}")
-                    break
-                
-                data = response.json()
-                page_users = data.get("data", [])
-                
-                if not page_users:
-                    break
-                
-                for user in page_users:
-                    users.append(UserSchema(
-                        id=user.get("id"),
-                        username=user.get("userName"),
-                        email=user.get("email"),
-                        server=ServerType.OMBI,
-                        is_admin=user.get("isAdmin", False),
-                        is_disabled=user.get("deleted", False),
-                        extra_data={"roles": user.get("claims", [])}
-                    ))
-                
-                skip += take
-                if len(page_users) < take:
-                    break
+            page_users = response.json()
+            if not isinstance(page_users, list):
+                return []
+            
+            users = []
+            for user in page_users:
+                is_admin = any(c.get("value") == "Admin" and c.get("enabled", False) for c in user.get("claims", []))
+                uname = user.get("alias") or user.get("userName") or ""
+                if "@" in uname:
+                    uname = uname.split("@")[0]
+                    
+                users.append(UserSchema(
+                    id=user.get("id"),
+                    username=uname,
+                    email=user.get("emailAddress"),
+                    server=ServerType.OMBI,
+                    is_admin=is_admin,
+                    is_disabled=False,
+                    extra_data={"roles": user.get("claims", [])}
+                ))
             
             return users
         except Exception as e:
@@ -86,11 +77,11 @@ class OmbiClient(BaseMediaServerClient):
                 "userName": username,
                 "password": password,
                 "emailAddress": "",
-                "isAdmin": False
+                "claims": []
             }
             
             response = await client.post(
-                f"{self.base_url}/user",
+                f"{self.base_url}/Identity",
                 headers=headers,
                 json=payload
             )
@@ -111,20 +102,25 @@ class OmbiClient(BaseMediaServerClient):
         try:
             client = await self._get_client()
             headers = {"ApiKey": self.api_key}
-            response = await client.get(f"{self.base_url}/user/{user_id}", headers=headers)
+            response = await client.get(f"{self.base_url}/Identity/User/{user_id}", headers=headers)
             
             if response.status_code != 200:
                 logger.warning(f"Ombi: User {user_id} not found")
                 return None
             
             user = response.json()
+            is_admin = any(c.get("value") == "Admin" and c.get("enabled", False) for c in user.get("claims", []))
+            uname = user.get("alias") or user.get("userName") or ""
+            if "@" in uname:
+                uname = uname.split("@")[0]
+                
             return UserSchema(
                 id=user.get("id"),
-                username=user.get("userName"),
-                email=user.get("email"),
+                username=uname,
+                email=user.get("emailAddress"),
                 server=ServerType.OMBI,
-                is_admin=user.get("isAdmin", False),
-                is_disabled=user.get("deleted", False),
+                is_admin=is_admin,
+                is_disabled=False,
                 extra_data={"roles": user.get("claims", [])}
             )
         except Exception as e:
@@ -138,18 +134,19 @@ class OmbiClient(BaseMediaServerClient):
             headers = {"ApiKey": self.api_key}
             
             # Get users list
-            response = await client.get(f"{self.base_url}/user?take=100&skip=0", headers=headers)
+            response = await client.get(f"{self.base_url}/Identity/Users", headers=headers)
             if response.status_code != 200:
                 return None
             
-            data = response.json()
-            users = data.get("data", [])
+            users = response.json()
+            if not isinstance(users, list):
+                return None
+                
             template_user = next((u for u in users if u.get("userName") == template_username), None)
             
             if template_user:
                 return {
-                    "claims": template_user.get("claims", []),
-                    "isAdmin": template_user.get("isAdmin", False)
+                    "claims": template_user.get("claims", [])
                 }
             
             return None
@@ -164,7 +161,7 @@ class OmbiClient(BaseMediaServerClient):
             headers = {"ApiKey": self.api_key}
             
             # Get current user
-            response = await client.get(f"{self.base_url}/user/{user_id}", headers=headers)
+            response = await client.get(f"{self.base_url}/Identity/User/{user_id}", headers=headers)
             if response.status_code != 200:
                 return False, "Could not retrieve user"
             
@@ -172,10 +169,9 @@ class OmbiClient(BaseMediaServerClient):
             
             # Update with template data
             user["claims"] = template_data.get("claims", user.get("claims", []))
-            user["isAdmin"] = template_data.get("isAdmin", False)
             
             response = await client.put(
-                f"{self.base_url}/user/{user_id}",
+                f"{self.base_url}/Identity",
                 headers=headers,
                 json=user
             )

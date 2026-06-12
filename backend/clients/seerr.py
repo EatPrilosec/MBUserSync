@@ -24,8 +24,8 @@ class SeerrClient(BaseMediaServerClient):
             
             if response.status_code == 200:
                 data = response.json()
-                total = data.get("pageInfo", {}).get("totalPages", 0)
-                return True, f"Connected. Found {total} pages of users."
+                total = data.get("pageInfo", {}).get("results", 0)
+                return True, f"Connected. Found {total} users."
             else:
                 return False, f"Connection failed: HTTP {response.status_code}"
         except Exception as e:
@@ -58,19 +58,25 @@ class SeerrClient(BaseMediaServerClient):
                     break
                 
                 for user in page_users:
+                    permissions = user.get("permissions", 0)
+                    uname = user.get("jellyfinUsername") or user.get("plexUsername") or user.get("username") or user.get("email", "")
+                    if "@" in uname:
+                        uname = uname.split("@")[0]
+                        
                     users.append(UserSchema(
                         id=str(user.get("id")),
-                        username=user.get("email", user.get("username", "")),
+                        username=uname,
                         email=user.get("email"),
                         server=ServerType.SEERR,
-                        is_admin=user.get("permissionLevel", 0) >= 2,
+                        is_admin=(permissions & 2) != 0,  # ADMIN flag is bit 1
                         is_disabled=False,  # Seerr doesn't have a disabled flag like others
-                        extra_data={"permissionLevel": user.get("permissionLevel", 0)}
+                        extra_data={"permissions": permissions}
                     ))
                 
                 skip += take
                 page_info = data.get("pageInfo", {})
-                if skip >= page_info.get("pages", 0) * page_info.get("pageSize", take):
+                total_results = page_info.get("results", 0)
+                if skip >= total_results:
                     break
             
             return users
@@ -85,12 +91,13 @@ class SeerrClient(BaseMediaServerClient):
             headers = {"X-Api-Key": self.api_key}
             
             # Seerr typically uses email as identifier
-            email = username if "@" in username else f"{username}@local"
+            email = username if "@" in username else f"{username}@fale.ema.il"
             
             payload = {
                 "email": email,
                 "username": username,
-                "permissionLevel": 0  # Regular user
+                "password": password,
+                "permissions": 0  # Regular user (no special permissions)
             }
             
             response = await client.post(
@@ -122,14 +129,19 @@ class SeerrClient(BaseMediaServerClient):
                 return None
             
             user = response.json()
+            permissions = user.get("permissions", 0)
+            uname = user.get("jellyfinUsername") or user.get("plexUsername") or user.get("username") or user.get("email", "")
+            if "@" in uname:
+                uname = uname.split("@")[0]
+                
             return UserSchema(
                 id=str(user.get("id")),
-                username=user.get("email", user.get("username", "")),
+                username=uname,
                 email=user.get("email"),
                 server=ServerType.SEERR,
-                is_admin=user.get("permissionLevel", 0) >= 2,
+                is_admin=(permissions & 2) != 0,
                 is_disabled=False,
-                extra_data={"permissionLevel": user.get("permissionLevel", 0)}
+                extra_data={"permissions": permissions}
             )
         except Exception as e:
             logger.error(f"Seerr: Error getting user {user_id}: {str(e)}")
@@ -157,7 +169,7 @@ class SeerrClient(BaseMediaServerClient):
             
             if template_user:
                 return {
-                    "permissionLevel": template_user.get("permissionLevel", 0)
+                    "permissions": template_user.get("permissions", 0)
                 }
             
             return None
@@ -179,7 +191,7 @@ class SeerrClient(BaseMediaServerClient):
             user = response.json()
             
             # Update with template data
-            user["permissionLevel"] = template_data.get("permissionLevel", 0)
+            user["permissions"] = template_data.get("permissions", user.get("permissions", 0))
             
             response = await client.put(
                 f"{self.base_url}/user/{user_id}",

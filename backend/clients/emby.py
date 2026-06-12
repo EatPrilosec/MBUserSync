@@ -71,7 +71,7 @@ class EmbyJellyfinClient(BaseMediaServerClient):
             }
             
             response = await client.post(
-                f"{self.base_url}/Users",
+                f"{self.base_url}/Users/New",
                 headers=headers,
                 json=payload
             )

@@ -155,11 +155,12 @@ class UserSyncEngine:
                             logger.warning(f"Failed to apply template to {user.username} on {sec_server_type}: {msg}")
             
             self.last_sync_time = datetime.now()
+            unique_synced = len({u["username"] for u in details["synced_users"]})
             
             return UserSyncResultSchema(
                 success=len(errors) == 0,
-                message=f"Synced {synced_count} users from {primary_server}",
-                synced_count=synced_count,
+                message=f"Synced {unique_synced} users from {primary_server}",
+                synced_count=unique_synced,
                 errors=errors,
                 details=details
             )
@@ -191,7 +192,7 @@ class UserSyncEngine:
             
             # Collect all unique users from all servers
             all_users_by_server: Dict[ServerType, List[UserSchema]] = {}
-            all_unique_usernames: Set[str] = set()
+            all_unique_usernames: Dict[str, str] = {}
             
             for server_type, (client, config) in servers.items():
                 exclude_set = self._add_default_exclusions(
@@ -205,7 +206,9 @@ class UserSyncEngine:
                 ]
                 
                 all_users_by_server[server_type] = filtered_users
-                all_unique_usernames.update(u.username.lower() for u in filtered_users)
+                for u in filtered_users:
+                    if u.username.lower() not in all_unique_usernames:
+                        all_unique_usernames[u.username.lower()] = u.username
                 
                 logger.info(f"{server_type}: {len(users)} total, {len(filtered_users)} to sync")
             
@@ -229,14 +232,14 @@ class UserSyncEngine:
                 if dest_config.template_user:
                     template_data = await dest_client.get_user_template(dest_config.template_user)
                 
-                for username in all_unique_usernames:
+                for username_lower, username in all_unique_usernames.items():
                     # Skip if excluded
                     if self._should_exclude_user(username, dest_exclude):
                         logger.debug(f"User {username} excluded on {dest_server_type}")
                         continue
                     
                     # Skip if already exists
-                    if username in dest_usernames:
+                    if username_lower in dest_usernames:
                         logger.debug(f"User {username} already exists on {dest_server_type}")
                         continue
                     
@@ -263,11 +266,12 @@ class UserSyncEngine:
                             logger.warning(f"Failed to apply template to {username} on {dest_server_type}: {msg}")
             
             self.last_sync_time = datetime.now()
+            unique_synced = len({u["username"] for u in details["synced_users"]})
             
             return UserSyncResultSchema(
                 success=len(errors) == 0,
-                message=f"Synced {synced_count} users across {len(servers)} servers",
-                synced_count=synced_count,
+                message=f"Synced {unique_synced} users across {len(servers)} servers",
+                synced_count=unique_synced,
                 errors=errors,
                 details=details
             )
