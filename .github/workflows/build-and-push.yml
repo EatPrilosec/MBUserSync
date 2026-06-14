@@ -82,8 +82,9 @@ jobs:
       - name: Tag and push latest
         if: github.ref == 'refs/heads/main'
         run: |
-          docker tag ghcr.io/${{ github.repository }}@${{ steps.push.outputs.digest }} ghcr.io/${{ github.repository }}:latest
-          docker push ghcr.io/${{ github.repository }}:latest
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker tag ghcr.io/${REPO_LOWER}@${{ steps.push.outputs.digest }} ghcr.io/${REPO_LOWER}:latest
+          docker push ghcr.io/${REPO_LOWER}:latest
 
       - name: Generate artifact attestation
         if: github.event_name != 'pull_request'
