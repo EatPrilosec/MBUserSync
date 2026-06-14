@@ -13,6 +13,9 @@ export default function SettingsPage() {
       sync_mode: 'primary_source',
       sync_enabled: true,
       cron_schedule: '*/20 * * * *',
+      password_strategy: 'use_username',
+      global_password: '',
+      allow_blank_passwords: false,
     }
   })
   
@@ -40,6 +43,9 @@ export default function SettingsPage() {
           sync_mode: settings.sync_config.sync_mode ?? 'primary_source',
           sync_enabled: settings.sync_config.sync_enabled ?? true,
           cron_schedule: settings.sync_config.cron_schedule ?? '*/20 * * * *',
+          password_strategy: settings.sync_config.password_strategy ?? 'use_username',
+          global_password: settings.sync_config.global_password ?? '',
+          allow_blank_passwords: settings.sync_config.allow_blank_passwords ?? false,
         })
       }
     } catch (error) {
@@ -176,6 +182,56 @@ export default function SettingsPage() {
           {errors.cron_schedule && <span className="text-muted">{errors.cron_schedule.message}</span>}
           <p className="text-muted mt-1">
             Format: minute hour day month dayOfWeek (e.g., "*/20 * * * *" = every 20 minutes)
+          </p>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="password_strategy">Default Password Strategy</label>
+          <Controller
+            name="password_strategy"
+            control={control}
+            render={({ field }) => (
+              <select {...field} id="password_strategy">
+                <option value="use_username">Use Username as Password</option>
+                <option value="global_default">Set Global Default Password</option>
+              </select>
+            )}
+          />
+        </div>
+
+        {watch('password_strategy') === 'global_default' && (
+          <div className="form-group">
+            <label htmlFor="global_password">Global Default Password</label>
+            <Controller
+              name="global_password"
+              control={control}
+              rules={{ required: 'Global password is required when strategy is Global Default' }}
+              render={({ field }) => (
+                <input
+                  {...field}
+                  id="global_password"
+                  type="password"
+                  placeholder="Enter default password"
+                />
+              )}
+            />
+            {errors.global_password && <span className="text-muted">{errors.global_password.message}</span>}
+          </div>
+        )}
+
+        <div className="form-group">
+          <label className="checkbox-group">
+            <Controller
+              name="allow_blank_passwords"
+              control={control}
+              render={({ field: { value, onChange, ...rest } }) => (
+                <input type="checkbox" checked={!!value} onChange={(e) => onChange(e.target.checked)} {...rest} />
+              )}
+            />
+            <span>Leave password blank when possible (Supported natively by Emby and Jellyfin)</span>
+          </label>
+          <p className="text-muted mt-1">
+            Seerr and Ombi explicitly reject blank passwords via their APIs and will always fall back to the strategy above.
           </p>
         </div>
         

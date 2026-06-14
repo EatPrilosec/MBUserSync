@@ -87,29 +87,80 @@ class EmbyJellyfinClient(BaseMediaServerClient):
             logger.error(f"Emby: Error creating user {username}: {str(e)}")
             return False, None, str(e)
     
+    async def delete_user(self, user_id: str) -> tuple[bool, str]:
+        """Delete a user in Emby/Jellyfin."""
+        try:
+            client = await self._get_client()
+            headers = {"X-MediaBrowser-Token": self.api_key}
+            
+            response = await client.delete(
+                f"{self.base_url}/Users/{user_id}",
+                headers=headers
+            )
+            
+            if response.status_code in [200, 204]:
+                return True, f"User {user_id} deleted successfully"
+            else:
+                error_msg = f"HTTP {response.status_code}: {response.text}"
+                logger.error(f"Emby: Failed to delete user {user_id}: {error_msg}")
+                return False, error_msg
+        except Exception as e:
+            logger.error(f"Emby: Error deleting user {user_id}: {str(e)}")
+            return False, str(e)
+            
     async def get_user_by_id(self, user_id: str) -> Optional[UserSchema]:
         """Get user by ID from Emby/Jellyfin."""
         try:
             client = await self._get_client()
             headers = {"X-MediaBrowser-Token": self.api_key}
-            response = await client.get(f"{self.base_url}/Users/{user_id}", headers=headers)
             
-            if response.status_code != 200:
-                logger.warning(f"Emby: User {user_id} not found")
-                return None
-            
-            user = response.json()
-            return UserSchema(
-                id=user.get("Id"),
-                username=user.get("Name"),
-                server=ServerType.EMBY,
-                is_admin=user.get("Policy", {}).get("IsAdministrator", False),
-                is_disabled=user.get("Policy", {}).get("IsDisabled", False),
-                extra_data={"policy": user.get("Policy", {})}
+            response = await client.get(
+                f"{self.base_url}/Users/{user_id}",
+                headers=headers
             )
+            
+            if response.status_code == 200:
+                user_data = response.json()
+                return UserSchema(
+                    id=user_data["Id"],
+                    username=user_data["Name"],
+                    server=ServerType.EMBY,
+                    is_admin=user_data.get("Policy", {}).get("IsAdministrator", False),
+                    is_disabled=user_data.get("Policy", {}).get("IsDisabled", False),
+                    extra_data=user_data
+                )
+            return None
         except Exception as e:
             logger.error(f"Emby: Error getting user {user_id}: {str(e)}")
             return None
+
+    async def change_password(self, user_id: str, new_password: str) -> tuple[bool, str]:
+        """Change user password in Emby/Jellyfin."""
+        try:
+            client = await self._get_client()
+            headers = {"X-MediaBrowser-Token": self.api_key}
+            
+            # For admin changing another user's password, we typically post to /Users/{Id}/Password
+            payload = {
+                "CurrentPw": "", 
+                "NewPw": new_password
+            }
+            
+            response = await client.post(
+                f"{self.base_url}/Users/{user_id}/Password",
+                headers=headers,
+                json=payload
+            )
+            
+            if response.status_code in [200, 204]:
+                return True, "Password updated successfully"
+            else:
+                error_msg = f"HTTP {response.status_code}: {response.text}"
+                logger.error(f"Emby: Failed to change password for user {user_id}: {error_msg}")
+                return False, error_msg
+        except Exception as e:
+            logger.error(f"Emby: Error changing password for user {user_id}: {str(e)}")
+            return False, str(e)
     
     async def get_user_template(self, template_username: str) -> Optional[Dict[str, Any]]:
         """Get template user policy/settings."""

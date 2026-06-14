@@ -5,7 +5,7 @@ import { create } from 'zustand'
  */
 export const useAppStore = create((set) => ({
   // UI state
-  activeTab: 'emby',
+  activeTab: 'users',
   setActiveTab: (tab) => set({ activeTab: tab }),
   
   // Settings state

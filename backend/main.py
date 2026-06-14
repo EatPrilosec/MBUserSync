@@ -67,6 +67,18 @@ routes.setup_routes(app)
 
 # Serve React frontend
 frontend_dist_path = Path(__file__).parent.parent / "frontend" / "dist"
+
+from fastapi.responses import FileResponse
+
+@app.get("/register", include_in_schema=False)
+@app.get("/reset", include_in_schema=False)
+async def serve_react_routes():
+    """Serve the React index.html for specific client-side routes."""
+    index_path = frontend_dist_path / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+    return {"detail": "Frontend not built"}
+
 if frontend_dist_path.exists():
     app.mount("/", StaticFiles(directory=str(frontend_dist_path), html=True), name="static")
     logger.info(f"Mounted frontend from {frontend_dist_path}")

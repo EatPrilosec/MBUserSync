@@ -97,6 +97,27 @@ class OmbiClient(BaseMediaServerClient):
             logger.error(f"Ombi: Error creating user {username}: {str(e)}")
             return False, None, str(e)
     
+    async def delete_user(self, user_id: str) -> tuple[bool, str]:
+        """Delete a user in Ombi."""
+        try:
+            client = await self._get_client()
+            headers = {"ApiKey": self.api_key}
+            
+            response = await client.delete(
+                f"{self.base_url}/Identity/{user_id}",
+                headers=headers
+            )
+            
+            if response.status_code in [200, 204]:
+                return True, f"User {user_id} deleted successfully"
+            else:
+                error_msg = f"HTTP {response.status_code}: {response.text}"
+                logger.error(f"Ombi: Failed to delete user {user_id}: {error_msg}")
+                return False, error_msg
+        except Exception as e:
+            logger.error(f"Ombi: Error deleting user {user_id}: {str(e)}")
+            return False, str(e)
+            
     async def get_user_by_id(self, user_id: str) -> Optional[UserSchema]:
         """Get user by ID from Ombi."""
         try:
@@ -121,11 +142,40 @@ class OmbiClient(BaseMediaServerClient):
                 server=ServerType.OMBI,
                 is_admin=is_admin,
                 is_disabled=False,
-                extra_data={"roles": user.get("claims", [])}
+                extra_data=user
             )
         except Exception as e:
             logger.error(f"Ombi: Error getting user {user_id}: {str(e)}")
             return None
+
+    async def change_password(self, user_id: str, new_password: str) -> tuple[bool, str]:
+        """Change user password in Ombi."""
+        try:
+            client = await self._get_client()
+            headers = {"ApiKey": self.api_key}
+            
+            response = await client.get(f"{self.base_url}/Identity/User/{user_id}", headers=headers)
+            if response.status_code != 200:
+                return False, "User not found"
+                
+            user = response.json()
+            user["password"] = new_password
+            
+            response = await client.put(
+                f"{self.base_url}/Identity",
+                headers=headers,
+                json=user
+            )
+            
+            if response.status_code in [200, 204]:
+                return True, "Password updated successfully"
+            else:
+                error_msg = f"HTTP {response.status_code}: {response.text}"
+                logger.error(f"Ombi: Failed to change password for user {user_id}: {error_msg}")
+                return False, error_msg
+        except Exception as e:
+            logger.error(f"Ombi: Error changing password for user {user_id}: {str(e)}")
+            return False, str(e)
     
     async def get_user_template(self, template_username: str) -> Optional[Dict[str, Any]]:
         """Get template user settings (roles/claims)."""

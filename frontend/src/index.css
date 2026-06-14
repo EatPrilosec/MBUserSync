@@ -38,6 +38,7 @@ code {
   letter-spacing: -0.5px;
   background: linear-gradient(90deg, #60a5fa, #a78bfa);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -336,4 +337,137 @@ code {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
+}
+
+/* Modal Styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #1e2128;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.button-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.button-close:hover {
+  color: #f8fafc;
+}
+
+/* Table Styles */
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.users-table th,
+.users-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.users-table th {
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.users-table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.users-table td {
+  vertical-align: middle;
+}
+
+/* Badges for users tab */
+.server-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-emby { background-color: rgba(82, 181, 75, 0.15); color: #52B54B; border: 1px solid rgba(82, 181, 75, 0.3); }
+.badge-jellyfin { background-color: rgba(0, 164, 220, 0.15); color: #00A4DC; border: 1px solid rgba(0, 164, 220, 0.3); }
+.badge-ombi { background-color: rgba(229, 90, 90, 0.15); color: #E55A5A; border: 1px solid rgba(229, 90, 90, 0.3); }
+.badge-seerr { background-color: rgba(235, 163, 54, 0.15); color: #EBA336; border: 1px solid rgba(235, 163, 54, 0.3); }
+.badge-excluded { opacity: 0.5; text-decoration: line-through; }
+
+.button-small {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.button-group-small {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ml-1 { margin-left: 0.5rem; }
+
+.button-warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.button-warning:hover:not(:disabled) {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
 }

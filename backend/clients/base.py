@@ -45,6 +45,14 @@ class BaseMediaServerClient:
     async def create_user(self, username: str, password: str = "ChangeMe123!") -> tuple[bool, Optional[str], Optional[str]]:
         """Create a new user. Returns (success, user_id, error_message)."""
         raise NotImplementedError
+        
+    async def delete_user(self, user_id: str) -> tuple[bool, str]:
+        """Delete a user. Returns (success, message)."""
+        raise NotImplementedError
+        
+    async def change_password(self, user_id: str, new_password: str) -> tuple[bool, str]:
+        """Change a user's password. Returns (success, message)."""
+        raise NotImplementedError
     
     async def get_user_by_id(self, user_id: str) -> Optional[UserSchema]:
         """Get user by ID."""

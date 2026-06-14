@@ -117,35 +117,86 @@ class SeerrClient(BaseMediaServerClient):
             logger.error(f"Seerr: Error creating user {username}: {str(e)}")
             return False, None, str(e)
     
+    async def delete_user(self, user_id: str) -> tuple[bool, str]:
+        """Delete a user in Seerr."""
+        try:
+            client = await self._get_client()
+            headers = {"X-Api-Key": self.api_key}
+            
+            response = await client.delete(
+                f"{self.base_url}/user/{user_id}",
+                headers=headers
+            )
+            
+            if response.status_code in [200, 204]:
+                return True, f"User {user_id} deleted successfully"
+            else:
+                error_msg = f"HTTP {response.status_code}: {response.text}"
+                logger.error(f"Seerr: Failed to delete user {user_id}: {error_msg}")
+                return False, error_msg
+        except Exception as e:
+            logger.error(f"Seerr: Error deleting user {user_id}: {str(e)}")
+            return False, str(e)
+            
     async def get_user_by_id(self, user_id: str) -> Optional[UserSchema]:
         """Get user by ID from Seerr."""
         try:
             client = await self._get_client()
             headers = {"X-Api-Key": self.api_key}
-            response = await client.get(f"{self.base_url}/user/{user_id}", headers=headers)
             
-            if response.status_code != 200:
-                logger.warning(f"Seerr: User {user_id} not found")
-                return None
-            
-            user = response.json()
-            permissions = user.get("permissions", 0)
-            uname = user.get("jellyfinUsername") or user.get("plexUsername") or user.get("username") or user.get("email", "")
-            if "@" in uname:
-                uname = uname.split("@")[0]
-                
-            return UserSchema(
-                id=str(user.get("id")),
-                username=uname,
-                email=user.get("email"),
-                server=ServerType.SEERR,
-                is_admin=(permissions & 2) != 0,
-                is_disabled=False,
-                extra_data={"permissions": permissions}
+            response = await client.get(
+                f"{self.base_url}/user/{user_id}",
+                headers=headers
             )
+            
+            if response.status_code == 200:
+                user_data = response.json()
+                # Seerr priority name
+                uname = user_data.get("plexUsername") or user_data.get("jellyfinUsername") or user_data.get("username") or user_data.get("email", "").split("@")[0]
+                
+                # Check for admin
+                permissions = user_data.get("permissions", 0)
+                is_admin = bool(permissions & 2) # 2 is ADMIN in Seerr
+                
+                return UserSchema(
+                    id=user_data["id"],
+                    username=uname,
+                    email=user_data.get("email"),
+                    server=ServerType.SEERR,
+                    is_admin=is_admin,
+                    is_disabled=False,
+                    extra_data=user_data
+                )
+            return None
         except Exception as e:
             logger.error(f"Seerr: Error getting user {user_id}: {str(e)}")
             return None
+
+    async def change_password(self, user_id: str, new_password: str) -> tuple[bool, str]:
+        """Change user password in Seerr."""
+        try:
+            client = await self._get_client()
+            headers = {"X-Api-Key": self.api_key}
+            
+            payload = {
+                "password": new_password
+            }
+            
+            response = await client.put(
+                f"{self.base_url}/user/{user_id}",
+                headers=headers,
+                json=payload
+            )
+            
+            if response.status_code in [200, 204]:
+                return True, "Password updated successfully"
+            else:
+                error_msg = f"HTTP {response.status_code}: {response.text}"
+                logger.error(f"Seerr: Failed to change password for user {user_id}: {error_msg}")
+                return False, error_msg
+        except Exception as e:
+            logger.error(f"Seerr: Error changing password for user {user_id}: {str(e)}")
+            return False, str(e)
     
     async def get_user_template(self, template_username: str) -> Optional[Dict[str, Any]]:
         """Get template user settings (permission level, etc.)."""

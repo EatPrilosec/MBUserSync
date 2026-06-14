@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { EmbyTab, JellyfinTab, OmbiTab, SeerrTab } from '../components/ServerTabs'
+import UsersTab from '../components/UsersTab'
 import SettingsPage from '../pages/SettingsPage'
 
 export default function Layout() {
   const { activeTab, setActiveTab } = useAppStore()
   
   const tabs = [
+    { id: 'users', label: 'Users', component: UsersTab },
     { id: 'emby', label: 'Emby', component: EmbyTab },
     { id: 'jellyfin', label: 'Jellyfin', component: JellyfinTab },
     { id: 'ombi', label: 'Ombi', component: OmbiTab },

@@ -41,6 +41,9 @@ class SyncConfigSchema(BaseModel):
     sync_mode: SyncModeEnum = SyncModeEnum.PRIMARY_SOURCE
     sync_enabled: bool = True
     cron_schedule: str = "*/20 * * * *"  # Every 20 minutes
+    password_strategy: str = "use_username"
+    global_password: str = ""
+    allow_blank_passwords: bool = False
 
 
 class AppSettingsSchema(BaseModel):

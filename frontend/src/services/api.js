@@ -64,6 +64,43 @@ export const getServerUsers = (serverName) => fetchAPI(`/servers/${serverName}/u
   method: 'POST',
 })
 
+// Users Management
+export const getAllUsers = () => fetchAPI('/users')
+export const deleteUser = (serverName, username) => fetchAPI(`/users/${serverName}/${username}`, {
+  method: 'DELETE',
+})
+export const toggleExcludeUser = (serverName, username, exclude) => fetchAPI(`/users/${serverName}/exclude/${username}`, {
+  method: 'PUT',
+  body: JSON.stringify({ exclude }),
+})
+
+export const changePassword = async (username, password) => {
+  return fetchAPI(`/users/${username}/password`, {
+    method: 'POST',
+    body: JSON.stringify({ password })
+  })
+}
+
+export const generateResetToken = async (username) => {
+  return fetchAPI(`/users/${username}/reset-token`, {
+    method: 'POST'
+  })
+}
+
+export const resetPassword = async (token, password) => {
+  return fetchAPI('/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, password })
+  })
+}
+
+export const registerUser = async (username, password) => {
+  return fetchAPI('/register', {
+    method: 'POST',
+    body: JSON.stringify({ username, password })
+  })
+}
+
 // Sync
 export const getSyncStatus = () => fetchAPI('/sync/status')
 export const runSync = () => fetchAPI('/sync/run', { method: 'POST' })
@@ -85,4 +122,11 @@ export default {
   runSync,
   updateSyncConfig,
   validateSync,
+  getAllUsers,
+  deleteUser,
+  toggleExcludeUser,
+  changePassword,
+  generateResetToken,
+  resetPassword,
+  registerUser,
 }

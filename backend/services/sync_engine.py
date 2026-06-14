@@ -4,8 +4,9 @@ from typing import Dict, List, Set, Optional, Any
 from datetime import datetime
 from backend.clients.base import BaseMediaServerClient
 from backend.models.schemas import (
-    UserSchema, SyncModeEnum, ServerType, ServerConfigSchema, UserSyncResultSchema
+    UserSchema, SyncModeEnum, ServerType, ServerConfigSchema, UserSyncResultSchema, SyncConfigSchema
 )
+from backend.config import get_config_service
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,16 @@ class UserSyncEngine:
     def _should_exclude_user(self, username: str, exclude_list: Set[str]) -> bool:
         """Check if user should be excluded from sync."""
         return username.lower() in exclude_list
+        
+    def _determine_password(self, username: str, dest_server_type: ServerType, sync_config: SyncConfigSchema) -> str:
+        """Determine what password to use for a newly created user."""
+        if sync_config.allow_blank_passwords and dest_server_type in [ServerType.EMBY, ServerType.JELLYFIN]:
+            return ""
+            
+        if sync_config.password_strategy == "global_default" and sync_config.global_password:
+            return sync_config.global_password
+            
+        return username
     
     async def sync_primary_source(
         self,
@@ -131,8 +142,12 @@ class UserSyncEngine:
                         logger.debug(f"User {user.username} already exists on {sec_server_type}")
                         continue
                     
+                    # Determine password based on config
+                    sync_config = get_config_service().get_sync_config()
+                    password = self._determine_password(user.username, sec_server_type, sync_config)
+                    
                     # Create user
-                    success, user_id, error = await sec_client.create_user(user.username)
+                    success, user_id, error = await sec_client.create_user(user.username, password)
                     
                     if not success:
                         error_msg = f"Failed to create {user.username} on {sec_server_type}: {error}"
@@ -243,8 +258,12 @@ class UserSyncEngine:
                         logger.debug(f"User {username} already exists on {dest_server_type}")
                         continue
                     
+                    # Determine password based on config
+                    sync_config = get_config_service().get_sync_config()
+                    password = self._determine_password(username, dest_server_type, sync_config)
+                    
                     # Create user
-                    success, user_id, error = await dest_client.create_user(username)
+                    success, user_id, error = await dest_client.create_user(username, password)
                     
                     if not success:
                         error_msg = f"Failed to create {username} on {dest_server_type}: {error}"

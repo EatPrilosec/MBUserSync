@@ -91,7 +91,10 @@ class ConfigService:
             "sync_config": {
                 "sync_mode": "primary_source",
                 "sync_enabled": True,
-                "cron_schedule": "*/20 * * * *"
+                "cron_schedule": "*/20 * * * *",
+                "password_strategy": "use_username",
+                "global_password": "",
+                "allow_blank_passwords": False
             }
         }
     
