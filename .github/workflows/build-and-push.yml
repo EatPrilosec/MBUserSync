@@ -65,7 +65,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
-            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push
         id: push
@@ -78,13 +78,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Tag and push latest
-        if: github.ref == 'refs/heads/main'
-        run: |
-          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          docker tag ghcr.io/${REPO_LOWER}@${{ steps.push.outputs.digest }} ghcr.io/${REPO_LOWER}:latest
-          docker push ghcr.io/${REPO_LOWER}:latest
 
       - name: Generate artifact attestation
         if: github.event_name != 'pull_request'
