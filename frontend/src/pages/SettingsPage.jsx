@@ -109,7 +109,7 @@ export default function SettingsPage() {
       )}
       
       {syncStatus && (
-        <div className="alert alert-info">
+        <div className="alert alert-info" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
           <div>
             <strong>Sync Status:</strong>{' '}
             <span className={`status-badge ${syncStatus.enabled ? 'status-connected' : 'status-disconnected'}`}>
@@ -263,7 +263,7 @@ export default function SettingsPage() {
       </form>
       
       {validationResult && (
-        <div className={`alert alert-${validationResult.valid ? 'success' : 'warning'} mt-2`}>
+        <div className={`alert alert-${validationResult.valid ? 'success' : 'warning'} mt-2`} style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
           <strong>Validation Result:</strong>
           <div className="mt-1">
             Status: {validationResult.valid ? '✓ Valid' : '✗ Invalid'}
