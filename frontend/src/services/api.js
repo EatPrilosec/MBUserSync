@@ -66,23 +66,23 @@ export const getServerUsers = (serverName) => fetchAPI(`/servers/${serverName}/u
 
 // Users Management
 export const getAllUsers = () => fetchAPI('/users')
-export const deleteUser = (serverName, username) => fetchAPI(`/users/${serverName}/${username}`, {
+export const deleteUser = (serverName, username) => fetchAPI(`/users/${serverName}/${encodeURIComponent(username)}`, {
   method: 'DELETE',
 })
-export const toggleExcludeUser = (serverName, username, exclude) => fetchAPI(`/users/${serverName}/exclude/${username}`, {
+export const toggleExcludeUser = (serverName, username, exclude) => fetchAPI(`/users/${serverName}/exclude/${encodeURIComponent(username)}`, {
   method: 'PUT',
   body: JSON.stringify({ exclude }),
 })
 
 export const changePassword = async (username, password) => {
-  return fetchAPI(`/users/${username}/password`, {
+  return fetchAPI(`/users/${encodeURIComponent(username)}/password`, {
     method: 'POST',
     body: JSON.stringify({ password })
   })
 }
 
 export const generateResetToken = async (username) => {
-  return fetchAPI(`/users/${username}/reset-token`, {
+  return fetchAPI(`/users/${encodeURIComponent(username)}/reset-token`, {
     method: 'POST'
   })
 }

@@ -87,11 +87,16 @@ class SeerrClient(BaseMediaServerClient):
     async def create_user(self, username: str, password: str = "ChangeMe123!") -> tuple[bool, Optional[str], Optional[str]]:
         """Create a new user in Seerr (note: Seerr uses email-based auth)."""
         try:
+            import re
             client = await self._get_client()
             headers = {"X-Api-Key": self.api_key}
             
             # Seerr typically uses email as identifier
-            email = username if "@" in username else f"{username}@fale.ema.il"
+            # Sanitize username for email: strip characters invalid in email local part
+            email_safe_name = re.sub(r"[^a-zA-Z0-9._\-+]", "", username)
+            if not email_safe_name:
+                email_safe_name = "user"
+            email = username if "@" in username else f"{email_safe_name}@fale.ema.il"
             
             payload = {
                 "email": email,
