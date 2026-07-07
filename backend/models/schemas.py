@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
 from enum import Enum
 
@@ -78,3 +78,10 @@ class UserSchema(BaseModel):
     is_admin: bool = False
     is_disabled: bool = False
     extra_data: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator('username', mode='before')
+    @classmethod
+    def normalize_username(cls, v: str) -> str:
+        if not v:
+            return v
+        return v.replace('’', "'").replace('‘', "'").replace('´', "'").replace('`', "'")

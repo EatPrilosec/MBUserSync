@@ -386,7 +386,7 @@ def setup_routes(app: FastAPI) -> None:
             if not username or not password:
                 raise HTTPException(status_code=400, detail="Username and password are required")
                 
-            username = username.strip()
+            username = username.strip().replace('’', "'").replace('‘', "'").replace('´', "'").replace('`', "'")
             
             client_manager = APIClientManager()
             successes = []
