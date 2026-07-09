@@ -214,12 +214,27 @@ class OmbiClient(BaseMediaServerClient):
                     break
             
             if template_user:
-                # We need to strip any userId from the claims to prevent copying the template user's ID
-                # (Ombi sometimes attaches the user ID to the claims)
+                # We need to strip any userId from the claims and quality profiles
                 claims = template_user.get("claims", [])
                 clean_claims = [{"value": c.get("value"), "enabled": c.get("enabled", False)} for c in claims]
+                
+                quality_profiles = template_user.get("userQualityProfiles") or {}
+                clean_quality = {k: v for k, v in quality_profiles.items() if k not in ["userId", "id"]}
+                
                 return {
-                    "claims": clean_claims
+                    "claims": clean_claims,
+                    "userQualityProfiles": clean_quality,
+                    "movieRequestLimit": template_user.get("movieRequestLimit"),
+                    "episodeRequestLimit": template_user.get("episodeRequestLimit"),
+                    "musicRequestLimit": template_user.get("musicRequestLimit"),
+                    "movieRequestQuota": template_user.get("movieRequestQuota"),
+                    "episodeRequestQuota": template_user.get("episodeRequestQuota"),
+                    "musicRequestQuota": template_user.get("musicRequestQuota"),
+                    "movieRequestLimitType": template_user.get("movieRequestLimitType"),
+                    "musicRequestLimitType": template_user.get("musicRequestLimitType"),
+                    "episodeRequestLimitType": template_user.get("episodeRequestLimitType"),
+                    "streamingCountry": template_user.get("streamingCountry"),
+                    "language": template_user.get("language")
                 }
             
             return None
@@ -241,7 +256,17 @@ class OmbiClient(BaseMediaServerClient):
             user = response.json()
             
             # Update with template data
-            user["claims"] = template_data.get("claims", user.get("claims", []))
+            for key, value in template_data.items():
+                if key == "userQualityProfiles":
+                    target_qp = user.get("userQualityProfiles") or {}
+                    for k, v in value.items():
+                        target_qp[k] = v
+                    user["userQualityProfiles"] = target_qp
+                elif key == "claims":
+                    user["claims"] = value
+                else:
+                    if value is not None:
+                        user[key] = value
             
             response = await client.put(
                 f"{self.base_url}/Identity",
