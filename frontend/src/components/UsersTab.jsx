@@ -38,6 +38,36 @@ export default function UsersTab() {
     }
   }, [users, selectedUser])
 
+  const copyToClipboard = async (text, successMsg) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+        } catch (err) {
+          console.error('Fallback copy failed', err);
+          setError("Failed to copy. Please manually copy the link.");
+          document.body.removeChild(textArea);
+          return;
+        }
+        document.body.removeChild(textArea);
+      }
+      setSuccessMessage(successMsg);
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      console.error("Clipboard failed:", err);
+      setError("Failed to copy. Please manually copy the link.");
+    }
+  }
+
   const handleGenerateResetLink = async (username) => {
     setLoading(true)
     setError(null)
@@ -45,9 +75,7 @@ export default function UsersTab() {
     try {
       const data = await api.generateResetToken(username)
       const resetLink = `${window.location.origin}/reset?token=${data.token}`
-      await navigator.clipboard.writeText(resetLink)
-      setSuccessMessage(`Reset link for ${username} copied!`)
-      setTimeout(() => setSuccessMessage(null), 3000)
+      await copyToClipboard(resetLink, `Reset link for ${username} copied!`)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -75,9 +103,7 @@ export default function UsersTab() {
             className="button button-primary"
             onClick={async () => {
               const link = `${window.location.origin}/register`;
-              await navigator.clipboard.writeText(link);
-              setSuccessMessage('Registration link copied!');
-              setTimeout(() => setSuccessMessage(null), 3000);
+              await copyToClipboard(link, 'Registration link copied!');
             }}
           >
             Copy Registration Link
