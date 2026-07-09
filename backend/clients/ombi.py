@@ -88,7 +88,17 @@ class OmbiClient(BaseMediaServerClient):
             
             if response.status_code in [200, 201]:
                 user_data = response.json()
-                return True, user_data.get("id"), None
+                user_id = user_data.get("id")
+                if not user_id:
+                    # Ombi v4 returns {"successful": true, "errors": null} without an ID
+                    # We must fetch the user list to find the ID of the newly created user
+                    users_resp = await client.get(f"{self.base_url}/Identity/Users", headers=headers)
+                    if users_resp.status_code == 200:
+                        for u in users_resp.json():
+                            if u.get("userName") == username:
+                                user_id = u.get("id")
+                                break
+                return True, user_id, None
             else:
                 error_msg = f"HTTP {response.status_code}: {response.text}"
                 logger.error(f"Ombi: Failed to create user {username}: {error_msg}")
