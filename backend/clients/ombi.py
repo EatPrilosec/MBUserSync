@@ -192,11 +192,24 @@ class OmbiClient(BaseMediaServerClient):
             if not isinstance(users, list):
                 return None
                 
-            template_user = next((u for u in users if u.get("userName") == template_username), None)
+            target_lower = template_username.lower()
+            template_user = None
+            
+            for u in users:
+                uname = u.get("alias") or u.get("userName") or ""
+                if "@" in uname:
+                    uname = uname.split("@")[0]
+                if uname.lower() == target_lower:
+                    template_user = u
+                    break
             
             if template_user:
+                # We need to strip any userId from the claims to prevent copying the template user's ID
+                # (Ombi sometimes attaches the user ID to the claims)
+                claims = template_user.get("claims", [])
+                clean_claims = [{"value": c.get("value"), "enabled": c.get("enabled", False)} for c in claims]
                 return {
-                    "claims": template_user.get("claims", [])
+                    "claims": clean_claims
                 }
             
             return None

@@ -174,7 +174,8 @@ class EmbyJellyfinClient(BaseMediaServerClient):
                 return None
             
             users = response.json()
-            template_user = next((u for u in users if u.get("Name") == template_username), None)
+            target_lower = template_username.lower()
+            template_user = next((u for u in users if u.get("Name", "").lower() == target_lower), None)
             
             if template_user:
                 return template_user.get("Policy", {})

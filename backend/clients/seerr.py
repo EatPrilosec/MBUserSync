@@ -96,7 +96,7 @@ class SeerrClient(BaseMediaServerClient):
             email_safe_name = re.sub(r"[^a-zA-Z0-9._\-+]", "", username)
             if not email_safe_name:
                 email_safe_name = "user"
-            email = username if "@" in username else f"{email_safe_name}@fale.ema.il"
+            email = username if "@" in username else f"{email_safe_name}@fake.ema.il"
             
             payload = {
                 "email": email,
@@ -217,9 +217,9 @@ class SeerrClient(BaseMediaServerClient):
             data = response.json()
             users = data.get("results", [])
             
-            # Match by username or email
+            target_lower = template_username.lower()
             template_user = next(
-                (u for u in users if u.get("username") == template_username or u.get("email") == template_username),
+                (u for u in users if u.get("username", "").lower() == target_lower or u.get("email", "").lower() == target_lower),
                 None
             )
             
