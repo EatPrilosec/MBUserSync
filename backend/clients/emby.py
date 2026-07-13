@@ -176,9 +176,41 @@ class EmbyJellyfinClient(BaseMediaServerClient):
             users = response.json()
             target_lower = template_username.lower()
             template_user = next((u for u in users if u.get("Name", "").lower() == target_lower), None)
-            
             if template_user:
-                return template_user.get("Policy", {})
+                template_id = template_user.get("Id")
+                
+                # Fetch DisplayPreferences for common web clients and views
+                display_prefs_list = []
+                if template_id:
+                    # 'displaypreferences' = default (Emby), 'home' = Jellyfin home view
+                    # '3ce5b65d-e116-d731-65d1-efc4a30ec35c' = Jellyfin Web client magic UUID for Home Layout
+                    # '4a1707f1-0ac8-98fd-e56d-8ae52391872f' = Jellyfin Web client magic UUID for displaypreferences
+                    known_ids = ["displaypreferences", "home", "3ce5b65d-e116-d731-65d1-efc4a30ec35c", "4a1707f1-0ac8-98fd-e56d-8ae52391872f"]
+                    
+                    for display_id in known_ids:
+                        for client_str in ["web", "emby", "jellyfin-web"]:
+                            try:
+                                dp_resp = await client.get(
+                                    f"{self.base_url}/DisplayPreferences/{display_id}?userId={template_id}&client={client_str}",
+                                    headers=headers
+                                )
+                                if dp_resp.status_code == 200:
+                                    dp_data = dp_resp.json()
+                                    # Only add if we actually have data (not completely empty)
+                                    # Keep original ID because Jellyfin requires it to match the view
+                                    if dp_data:
+                                        dp_data["Client"] = client_str
+                                        # To avoid duplicates if Jellyfin returns same object for 'displaypreferences' and its UUID
+                                        if not any(d.get("Id") == dp_data.get("Id") and d.get("Client") == client_str for d in display_prefs_list):
+                                            display_prefs_list.append(dp_data)
+                            except Exception as e:
+                                logger.error(f"Emby: Failed to get DisplayPreferences ({display_id}) for {client_str}: {e}")
+
+                return {
+                    "Policy": template_user.get("Policy", {}),
+                    "Configuration": template_user.get("Configuration", {}),
+                    "DisplayPreferencesList": display_prefs_list
+                }
             
             return None
         except Exception as e:
@@ -186,22 +218,54 @@ class EmbyJellyfinClient(BaseMediaServerClient):
             return None
     
     async def update_user_from_template(self, user_id: str, template_data: Dict[str, Any]) -> tuple[bool, str]:
-        """Update user policy from template."""
+        """Update user policy and configuration from template."""
         try:
             client = await self._get_client()
             headers = {"X-MediaBrowser-Token": self.api_key}
             
-            response = await client.post(
+            # Post Policy
+            policy_data = template_data.get("Policy", template_data)
+            policy_response = await client.post(
                 f"{self.base_url}/Users/{user_id}/Policy",
                 headers=headers,
-                json=template_data
+                json=policy_data
             )
             
-            if response.status_code in [200, 204]:
-                return True, "User policy updated from template"
+            # Post Configuration if available
+            config_data = template_data.get("Configuration")
+            config_success = True
+            if config_data:
+                config_response = await client.post(
+                    f"{self.base_url}/Users/{user_id}/Configuration",
+                    headers=headers,
+                    json=config_data
+                )
+                if config_response.status_code not in [200, 204]:
+                    config_success = False
+                    logger.error(f"Emby: Failed to update configuration for {user_id}")
+            
+            # Post DisplayPreferences if available
+            dp_list = template_data.get("DisplayPreferencesList", [])
+            for dp_data in dp_list:
+                client_str = dp_data.get("Client", "web")
+                # Use the original Id if present, otherwise default to 'displaypreferences'
+                display_id = dp_data.get("Id", "displaypreferences")
+                try:
+                    dp_response = await client.post(
+                        f"{self.base_url}/DisplayPreferences/{display_id}?userId={user_id}&client={client_str}",
+                        headers=headers,
+                        json=dp_data
+                    )
+                    if dp_response.status_code not in [200, 204]:
+                        logger.error(f"Emby: Failed to update display preferences ({display_id}) for {user_id}")
+                except Exception as e:
+                    logger.error(f"Emby: Error updating display preferences ({display_id}) for {user_id}: {e}")
+            
+            if policy_response.status_code in [200, 204] and config_success:
+                return True, "User policy, configuration, and display preferences updated from template"
             else:
-                error_msg = f"HTTP {response.status_code}"
-                logger.error(f"Emby: Failed to update user {user_id} policy: {error_msg}")
+                error_msg = f"HTTP {policy_response.status_code}" if not config_success else f"HTTP {policy_response.status_code}"
+                logger.error(f"Emby: Failed to fully update user {user_id} from template")
                 return False, error_msg
         except Exception as e:
             logger.error(f"Emby: Error updating user {user_id}: {str(e)}")
